@@ -1,0 +1,44 @@
+{
+  "eval_mode": "text",
+  "evals": [
+    {
+      "id": 1,
+      "title": "SIMT vs SIMD Tiling 设计差异",
+      "config": {
+        "max_tokens": 100000,
+        "max_tokens_by_model": {
+          "deepseek-v4-flash": 120000,
+          "glm-5": 110000
+        },
+        "ascend_platforms": [
+          "A2"
+        ],
+        "eval_mode": "text"
+      },
+      "prompt": "SIMT 算子的切分设计与 SIMD 有什么本质差异？SIMT 算子切分不涉及哪些 SIMD 环节？不需要执行任何工具调用。",
+      "expected_output": "回复应说明 SIMT 和 SIMD 在切分设计上的本质差异在于并行粒度不同：SIMD 以向量级（UB 空间规划）为核心，SIMT 以线程级（核数/线程数规划）为核心。SIMT 切分不涉及的 SIMD 环节包括 UB 空间切分、Vector 指令流水线编排等。",
+      "files": [],
+      "expectations": []
+    },
+    {
+      "id": 2,
+      "title": "SIMT Tiling 核心设计要素",
+      "config": {
+        "max_tokens": 100000,
+        "max_tokens_by_model": {
+          "deepseek-v4-flash": 120000,
+          "glm-5": 110000
+        },
+        "ascend_platforms": [
+          "A2"
+        ],
+        "eval_mode": "text"
+      },
+      "prompt": "请先加载 ascendc-simt-tiling-design 技能并阅读其 SKILL.md 与 references/guide.md 后回答（不需要实际执行算子编译或运行）：SIMT 算子 Tiling 设计的核心要素有哪些？1）核数切分策略：公式是什么、单核最少处理元素数建议值及对齐要求、通过什么接口设置核数，数据量小导致线程空转时应调整核数还是线程数？2）线程数设置策略：默认值与最大值、是否必须是编译期常量、LAUNCH_BOUND(N) 与 Simt::Dim3(N) 的关系、能否从 tiling 数据动态获取？3）DCache 与 UB 空间分配：需为 DCache 预留多少、可用 UB 如何计算、通过什么接口设置？",
+      "expected_output": "1. 回复应说明核数切分策略：总核数 = ceil(输出元素总数 / 单核最少处理元素数)，单核最少处理元素数建议 1024 且需对 warp(32) 对齐，并在 tiling 侧通过 SetBlockDim 设置核数；数据量小导致线程空转时应调整核数而不是减少线程数。\n2. 回复应说明线程数设置策略：线程数必须是 constexpr 编译期常量（默认 1024、最大 2048），LAUNCH_BOUND(N) 与 Simt::Dim3(N) 必须使用同一个常量，禁止从 tiling 数据动态获取线程数。\n3. 回复应说明 DCache 与 UB 空间分配：需为 DCache 预留 ≥32KB，可用 UB = 256KB - 8KB - 32KB = 216KB，并通过 SetLocalMemorySize 设置可用 UB 大小。",
+      "files": [],
+      "expectations": []
+    }
+  ],
+  "skill_name": "ascendc-simt-tiling-design"
+}
